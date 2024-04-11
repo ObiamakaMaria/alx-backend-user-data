@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Operations related to data filtering"""
+"""Deal about filtering data"""
 
 from typing import List
 import logging
@@ -7,26 +7,28 @@ import re
 from os import getenv
 import mysql.connector
 
-SENSITIVE_FIELDS = ('email', 'name', 'ssn', 'password', 'phone')
+
+PII_FIELDS = ('email', 'name', 'ssn', 'password', 'phone')
 
 
-def obfuscate_data(fields: List[str], redaction: str,
-                   message: str, separator: str) -> str:
+def filter_datum(fields: List[str], redaction: str,
+                 message: str, separator: str) -> str:
     '''
-    A function named obfuscate_data that
-    returns the obfuscated log message
+    function called filter_datum that
+    returns the log message obfuscated
     '''
     for field in fields:
-        message = re.sub(field+'=.*?'+separator,
-                         field+'='+redaction+separator, message)
-    return message
+        mes = re.sub(field+'=.*?'+separator,
+                     field+'='+redaction+separator, message)
+    return mes
 
 
 class RedactingFormatter(logging.Formatter):
-    """Custom Formatter class for redacting sensitive data"""
+    """ Redacting Formatter class
+        """
 
     REDACTION = "***"
-    FORMAT = "[COMPANY] %(name)s %(levelname)s %(asctime)-15s: %(message)s"
+    FORMAT = "[HOLBERTON] %(name)s %(levelname)s %(asctime)-15s: %(message)s"
     SEPARATOR = ";"
 
     def __init__(self, fields: List[str]):
@@ -35,51 +37,51 @@ class RedactingFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         '''
-        A format method to filter values in
-        incoming log records using obfuscate_data
+        format method to filter values in
+        incoming log records using filter_datum
         '''
-        log_message = super(RedactingFormatter, self).format(record)
-        redacted_message = obfuscate_data(self.fields, self.REDACTION,
-                                          log_message, self.SEPARATOR)
-        return redacted_message
+        message = super(RedactingFormatter, self).format(record)
+        redact = filter_datum(self.fields, self.REDACTION,
+                              message, self.SEPARATOR)
+        return redact
 
 
 def get_logger() -> logging.Logger:
-    '''Obtain a logging instance'''
+    '''get logging function'''
     logger = logging.getLogger("user_data")
     logger.propagate = False
     logger.setLevel(logging.INFO)
     handler = logger.StreamHandler()
-    formatter = RedactingFormatter(SENSITIVE_FIELDS)
-    handler.setFormatter(formatter)
+    fmt = RedactingFormatter(PII_FIELDS)
+    handler.setFormatter(fmt)
     logger.addHandler(handler)
     return logger
 
 
-def get_database_connection() -> mysql.connector.connection.MySQLConnection:
-    '''Obtain a database connection securely'''
+def get_db() -> mysql.connector.connection.MySQLConnection:
+    '''get a database securely'''
     user = getenv('PERSONAL_DATA_DB_USERNAME')
     password = getenv('PERSONAL_DATA_DB_PASSWORD')
     host = getenv('PERSONAL_DATA_DB_HOST')
     db = getenv('PERSONAL_DATA_DB_NAME')
-    connection = mysql.connector.connect(user=user, password=password,
-                                         host=host, database=db)
-    return connection
+    connect = mysql.connector.connect(user=user, password=password,
+                                      host=host, database=db)
+    return connect
 
 
 def main():
     '''
-    Entry point of the program
+    entry point of the program
     '''
-    database = get_database_connection()
+    db = get_db()
     logger = get_logger()
-    cursor = database.cursor()
-    cursor.execute("SELECT * FROM users;")
-    field_names = cursor.column_names
-    for row in cursor:
-        message = "".join("{}={}; ".format(key, value) for key, value in zip(field_names, row))
-    cursor.close()
-    database.close()
+    cs = db.cursor()
+    cs.execute("SELECT * FROM users;")
+    fd = cs.column_names
+    for r in cs:
+        msg = "".join("{}={}; ".format(k, v) for k, v in zip(fd, r))
+    cs.close()
+    db.close()
 
 
 if __name__ == "__main__":
