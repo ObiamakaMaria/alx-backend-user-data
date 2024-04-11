@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Deal about filtering data"""
+""" Operations related to data filtering """
 
-from typing import List
+
 import logging
+from typing import List
 import re
 from os import getenv
 import mysql.connector
@@ -14,8 +15,8 @@ PII_FIELDS = ('email', 'name', 'ssn', 'password', 'phone')
 def filter_datum(fields: List[str], redaction: str,
                  message: str, separator: str) -> str:
     '''
-    function called filter_datum that
-    returns the log message obfuscated
+    A function named obfuscate_data that
+    returns the obfuscated log message
     '''
     for field in fields:
         mes = re.sub(field+'=.*?'+separator,
@@ -24,8 +25,8 @@ def filter_datum(fields: List[str], redaction: str,
 
 
 class RedactingFormatter(logging.Formatter):
-    """ Redacting Formatter class
-        """
+    """Custom Formatter class for redacting sensitive data
+    """
 
     REDACTION = "***"
     FORMAT = "[HOLBERTON] %(name)s %(levelname)s %(asctime)-15s: %(message)s"
@@ -37,8 +38,8 @@ class RedactingFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         '''
-        format method to filter values in
-        incoming log records using filter_datum
+        A format method to filter values in
+        incoming log records using obfuscate_data
         '''
         message = super(RedactingFormatter, self).format(record)
         redact = filter_datum(self.fields, self.REDACTION,
@@ -47,7 +48,7 @@ class RedactingFormatter(logging.Formatter):
 
 
 def get_logger() -> logging.Logger:
-    '''get logging function'''
+    ''' Obtain a logging instance'''
     logger = logging.getLogger("user_data")
     logger.propagate = False
     logger.setLevel(logging.INFO)
@@ -59,7 +60,7 @@ def get_logger() -> logging.Logger:
 
 
 def get_db() -> mysql.connector.connection.MySQLConnection:
-    '''get a database securely'''
+    ''' Obtain a database connection securely '''
     user = getenv('PERSONAL_DATA_DB_USERNAME')
     password = getenv('PERSONAL_DATA_DB_PASSWORD')
     host = getenv('PERSONAL_DATA_DB_HOST')
