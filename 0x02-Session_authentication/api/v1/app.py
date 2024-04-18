@@ -19,25 +19,38 @@ authenticate = getenv("AUTH_TYPE")
 if authenticate == "basic_auth":
     from api.v1.auth.basic_auth import BasicAuth
     auth = BasicAuth()
+elif authenticate == "session_auth":
+    from api.v1.auth.session_auth import SessionAuth
+    auth = SessionAuth()
+elif authenticate == "session_exp_auth":
+    from api.v1.auth.session_exp_auth import SessionExpAuth
+    auth = SessionExpAuth()
+elif authenticate == "session_db_auth":
+    from api.v1.auth.session_db_auth import SessionDBAuth
+    auth = SessionDBAuth()
 else:
     from api.v1.auth.auth import Auth
     auth = Auth()
 
 
 @app.before_request
-def pre_load():
-    """
-    load before all requests
-    """
-    if auth is None or not auth.require_auth(
-        request.path,
-        ['/api/v1/status/',
-         '/api/v1/unauthorized/', '/api/v1/forbidden/']):
-        return
-    if auth.authorization_header(request) is None:
-        abort(401)
-    if auth.current_user(request) is None:
-        abort(403)
+def before_request():
+    """ method of filtering that is triggered before each request"""
+    if auth:
+        excluded_paths = [
+            "/api/v1/status/",
+            "/api/v1/unauthorized/",
+            "/api/v1/forbidden/",
+            "/api/v1/auth_session/login/",
+        ]
+        if auth.require_auth(request.path, excluded_paths):
+            user = auth.current_user(request)
+            if auth.authorization_header(request) is None and \
+                    auth.session_cookie(request) is None:
+                abort(401)
+            if user is None:
+                abort(403)
+            request.current_user = user
 
 
 @app.errorhandler(404)
